@@ -28,6 +28,10 @@ inputs:
   helm_chart_app_version:
     description: "Helm chart app version to use for packaging."
     required: true
+  values_files:
+    description: "Comma- and/or newline-separated list of values files to merge (paths relative to chart_path). The merged result is embedded as values.yaml in the packaged chart."
+    required: false
+    default: ""
   package_args:
     description: "Extra args appended to `helm package` (e.g. --version 1.2.3 --app-version 1.2.3)."
     required: false

@@ -86,3 +86,28 @@ def test_build_helm_package_cmd_includes_versions_and_args():
     assert "--dependency-update" in cmd
     assert "--debug" in cmd
 
+
+def test_parse_values_files():
+    assert entrypoint.parse_values_files("") == []
+    assert entrypoint.parse_values_files("values.yaml") == ["values.yaml"]
+    assert entrypoint.parse_values_files("values.yaml,values.dev.yaml") == [
+        "values.yaml",
+        "values.dev.yaml",
+    ]
+    assert entrypoint.parse_values_files("values.yaml\nvalues.dev.yaml\n") == [
+        "values.yaml",
+        "values.dev.yaml",
+    ]
+
+
+def test_deep_merge_values_dict_merge_and_list_replace():
+    base = {"a": 1, "nested": {"x": 1, "keep": "k"}, "lst": [1, 2]}
+    override = {"nested": {"x": 9, "y": 2}, "lst": [3], "b": 2}
+    merged = entrypoint.deep_merge_values(base, override)
+    assert merged == {
+        "a": 1,
+        "b": 2,
+        "nested": {"x": 9, "y": 2, "keep": "k"},
+        "lst": [3],
+    }
+

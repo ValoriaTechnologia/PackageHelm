@@ -19,6 +19,9 @@ jobs:
         uses: <owner>/<repo>@v1
         with:
           chart_path: ./path/to/chart
+          values_files: |
+            values.yaml
+            values.dev.yaml
           destination: ./dist
           helm_version: v3.14.4
           dependency_update: "true"
@@ -38,6 +41,7 @@ jobs:
 - **`dependency_update`** (optional, default `false`): If `true`, runs `helm dependency update` before packaging.
 - **`helm_chart_version`** (required): Chart version passed to `helm package --version`.
 - **`helm_chart_app_version`** (required): App version passed to `helm package --app-version`.
+- **`values_files`** (optional): List of values files to merge **in order** (comma and/or newline separated). Paths are relative to `chart_path`. The merged result is embedded as `values.yaml` in the packaged chart.
 - **`package_args`** (optional): Extra arguments appended to `helm package`.
 
 ## Outputs

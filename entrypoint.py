@@ -8,8 +8,10 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import shutil
 import urllib.request
-import semver
+import semver  # type: ignore[import-not-found]
+import yaml  # type: ignore[import-not-found]
 
 
 def eprint(*args: object) -> None:
@@ -128,6 +130,53 @@ def workspace_relpath(workspace: str, p: str) -> str:
         return pp
 
 
+def parse_values_files(values_files_raw: str) -> list[str]:
+    """
+    Parse comma- and/or newline-separated file list.
+    """
+    items: list[str] = []
+    for part in re.split(r"[,\n\r]+", values_files_raw or ""):
+        p = part.strip()
+        if p:
+            items.append(p)
+    return items
+
+
+def deep_merge_values(base: object, override: object) -> object:
+    """
+    Deep-merge YAML values.
+
+    Rules:
+    - dict + dict: recursive merge
+    - otherwise (scalars, lists, mismatched types): replace with override
+    """
+    if isinstance(base, dict) and isinstance(override, dict):
+        merged: dict[object, object] = dict(base)
+        for k, v in override.items():
+            if k in merged:
+                merged[k] = deep_merge_values(merged[k], v)
+            else:
+                merged[k] = v
+        return merged
+    return override
+
+
+def load_yaml_file(path: str) -> object:
+    with open(path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    return {} if data is None else data
+
+
+def dump_yaml_file(path: str, data: object) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(
+            data,
+            f,
+            default_flow_style=False,
+            sort_keys=False,
+        )
+
+
 def build_helm_package_cmd(
     *,
     chart_path: str,
@@ -209,6 +258,7 @@ def main() -> int:
         package_args_in = get_input("package_args", default="")
         helm_chart_version = get_input("helm_chart_version", required=True)
         helm_chart_app_version = get_input("helm_chart_app_version", required=True)
+        values_files_raw = get_input("values_files", default="")
 
         if not validate_version(helm_chart_version):
             raise RuntimeError(f"Invalid helm chart version (SemVer required): {helm_chart_version}")
@@ -228,14 +278,33 @@ def main() -> int:
 
         install_helm(helm_version)
 
+        values_files = parse_values_files(values_files_raw)
+        chart_path_for_packaging = chart_path
+        if values_files:
+            eprint(f"Merging values files: {', '.join(values_files)}")
+            merged_values: object = {}
+            for rel in values_files:
+                src_path = os.path.normpath(os.path.join(chart_path, rel))
+                if not os.path.isfile(src_path):
+                    raise RuntimeError(f"Values file not found: {src_path}")
+                merged_values = deep_merge_values(merged_values, load_yaml_file(src_path))
+
+            tmp_root = tempfile.mkdtemp(prefix=".dist-temporary-", dir=workspace)
+            chart_name = os.path.basename(os.path.normpath(chart_path))
+            tmp_chart = os.path.join(tmp_root, chart_name)
+            shutil.copytree(chart_path, tmp_chart)
+
+            dump_yaml_file(os.path.join(tmp_chart, "values.yaml"), merged_values)
+            chart_path_for_packaging = tmp_chart
+
         if dependency_update:
             eprint("Running helm dependency update...")
-            dep = run(["helm", "dependency", "update", chart_path])
+            dep = run(["helm", "dependency", "update", chart_path_for_packaging])
             if dep.returncode != 0:
                 raise RuntimeError(f"`helm dependency update` failed:\n{dep.stdout}")
 
         cmd = build_helm_package_cmd(
-            chart_path=chart_path,
+            chart_path=chart_path_for_packaging,
             destination=destination,
             helm_chart_version=helm_chart_version,
             helm_chart_app_version=helm_chart_app_version,

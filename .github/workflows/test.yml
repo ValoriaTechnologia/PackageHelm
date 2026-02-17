@@ -45,6 +45,21 @@ jobs:
           EOF
           cat > test-chart/values.yaml <<'EOF'
           replicaCount: 1
+          nested:
+            keep: keepme
+            a: 1
+          lst:
+            - 1
+            - 2
+          foo: base
+          EOF
+          cat > test-chart/values.dev.yaml <<'EOF'
+          nested:
+            a: 9
+            b: 2
+          lst:
+            - 3
+          foo: override
           EOF
           cat > test-chart/templates/configmap.yaml <<'EOF'
           apiVersion: v1
@@ -60,6 +75,9 @@ jobs:
         uses: ./
         with:
           chart_path: ./test-chart
+          values_files: |
+            values.yaml
+            values.dev.yaml
           destination: ./dist
           helm_version: v3.14.4
           helm_chart_version: 1.2.3
@@ -69,4 +87,16 @@ jobs:
         run: |
           test -f "${{ steps.pkg.outputs.package_path }}"
           tar -tzf "${{ steps.pkg.outputs.package_path }}" >/dev/null
+
+      - name: Assert merged values are embedded
+        run: |
+          rm -rf extracted
+          mkdir -p extracted
+          tar -xzf "${{ steps.pkg.outputs.package_path }}" -C extracted
+          test -f extracted/test-chart/values.yaml
+          grep -q "foo: override" extracted/test-chart/values.yaml
+          grep -q "keep: keepme" extracted/test-chart/values.yaml
+          grep -q "a: 9" extracted/test-chart/values.yaml
+          grep -q "b: 2" extracted/test-chart/values.yaml
+          grep -q -- "- 3" extracted/test-chart/values.yaml
 
