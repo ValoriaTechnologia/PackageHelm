@@ -1,0 +1,70 @@
+name: Test action
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run unit tests
+        run: pytest -q ./tests
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create test chart
+        run: |
+          mkdir -p test-chart/templates dist
+          cat > test-chart/Chart.yaml <<'EOF'
+          apiVersion: v2
+          name: test-chart
+          description: Test chart
+          type: application
+          version: 0.1.0
+          appVersion: "0.1.0"
+          EOF
+          cat > test-chart/values.yaml <<'EOF'
+          replicaCount: 1
+          EOF
+          cat > test-chart/templates/configmap.yaml <<'EOF'
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: test
+          data:
+            hello: world
+          EOF
+
+      - name: Run action
+        id: pkg
+        uses: ./
+        with:
+          chart_path: ./test-chart
+          destination: ./dist
+          helm_version: v3.14.4
+          helm_chart_version: 1.2.3
+          helm_chart_app_version: 4.5.6
+
+      - name: Assert package exists and is readable
+        run: |
+          test -f "${{ steps.pkg.outputs.package_path }}"
+          tar -tzf "${{ steps.pkg.outputs.package_path }}" >/dev/null
+

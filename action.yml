@@ -1,0 +1,42 @@
+name: "Package Helm chart"
+description: "Install Helm and run `helm package` on a chart directory."
+author: "ValoriaTechnologia"
+
+branding:
+  icon: "package"
+  color: "blue"
+
+inputs:
+  chart_path:
+    description: "Path to the Helm chart directory (must contain Chart.yaml)."
+    required: true
+  destination:
+    description: "Directory where the packaged .tgz will be written."
+    required: false
+    default: "."
+  helm_version:
+    description: "Helm version tag to install (e.g. v3.14.4)."
+    required: false
+    default: "v3.14.4"
+  dependency_update:
+    description: "If true, run `helm dependency update` before packaging."
+    required: false
+    default: "false"
+  helm_chart_version:
+    description: "Helm chart version to use for packaging."
+    required: true
+  helm_chart_app_version:
+    description: "Helm chart app version to use for packaging."
+    required: true
+  package_args:
+    description: "Extra args appended to `helm package` (e.g. --version 1.2.3 --app-version 1.2.3)."
+    required: false
+    default: ""
+
+outputs:
+  package_path:
+    description: "Path to the created chart package (.tgz)."
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
