@@ -55,8 +55,13 @@ jobs:
 
 ## Publishing / versioning
 
-Recommended tagging strategy:
-- Create a release tag like **`v1.0.0`**
-- Also create/update a moving major tag **`v1`** pointing to the latest `v1.x.x`
+Releases are created **automatically** on push to `main` using [mathieudutour/github-tag-action](https://github.com/mathieudutour/github-tag-action). The next SemVer tag is computed from **conventional commits**:
 
-Consumers should typically use `@v1`.
+- `fix:` or `fix(scope):` → **patch** (e.g. 1.0.0 → 1.0.1)
+- `feat:` or `feat(scope):` → **minor** (e.g. 1.0.0 → 1.1.0)
+- `BREAKING CHANGE:` in body or `feat!:` / `fix!:` → **major** (e.g. 1.0.0 → 2.0.0)
+- Other commits use the **default bump** (patch)
+
+Each release includes auto-generated notes (changelog) and a **source zip** of the repo at that tag.
+
+Consumers should use `@v1` or a specific tag like `@v1.2.3`.

@@ -262,10 +262,6 @@ def main() -> int:
 
         if not validate_version(helm_chart_version):
             raise RuntimeError(f"Invalid helm chart version (SemVer required): {helm_chart_version}")
-        if not validate_version(helm_chart_app_version):
-            raise RuntimeError(
-                f"Invalid helm chart app version (SemVer required): {helm_chart_app_version}"
-            )
 
         chart_path = resolve_path(workspace, chart_path_in)
         destination = resolve_path(workspace, destination_in)
