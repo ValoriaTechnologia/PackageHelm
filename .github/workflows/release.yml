@@ -25,6 +25,10 @@ jobs:
           release_branches: main
           default_bump: patch
 
+      - name: Fetch tag
+        if: steps.tag.outputs.new_tag != ''
+        run: git fetch origin tag ${{ steps.tag.outputs.new_tag }}
+
       - name: Create source zip
         if: steps.tag.outputs.new_tag != ''
         run: git archive -o source.zip ${{ steps.tag.outputs.new_tag }}
