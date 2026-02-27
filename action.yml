@@ -42,4 +42,4 @@ outputs:
     description: Path to the created chart package (.tgz).
 runs:
   using: docker
-  image: ghcr.io/valoriatechnologia/package-helm:v0.1.0
+  image: docker://ghcr.io/valoriatechnologia/package-helm:v0.2.0
